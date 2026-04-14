@@ -56,7 +56,7 @@ The Windows build outputs are written to:
 
 ## GitHub Actions and releases
 
-The `Build` workflow compiles a Windows x86 Release package and uploads a zip as a workflow artifact.
+The `Build` workflow compiles Windows x86 and Linux i386 Release packages and uploads each zip as a workflow artifact.
 
 To publish a GitHub Release with the zip attached, push a version tag:
 
@@ -65,21 +65,38 @@ git tag v0.3.6
 git push origin v0.3.6
 ```
 
-The release asset is named `discord-connector-<tag>-win32.zip`.
+The release assets are named:
+
+- `discord-connector-<tag>-win32.zip`
+- `discord-connector-<tag>-linux-i386.zip`
 
 ## Linux build
 
 The project also builds on Linux as a 32-bit plugin when the required 32-bit libraries are available.
+On Ubuntu, install multilib support first:
 
 ```bash
-mkdir build
-cd build
-cmake .. \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_C_FLAGS=-m32 \
-  -DCMAKE_CXX_FLAGS=-m32
-cmake --build . -j"$(nproc)"
+sudo apt-get update
+sudo apt-get install -y gcc-multilib g++-multilib zip
+python -m pip install --user "conan<2" "cmake<4"
 ```
+
+```bash
+cmake -S . -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_FLAGS="-m32" \
+  -DCMAKE_CXX_FLAGS="-m32" \
+  -DCMAKE_EXE_LINKER_FLAGS="-m32" \
+  -DCMAKE_SHARED_LINKER_FLAGS="-m32" \
+  -DCMAKE_MODULE_LINKER_FLAGS="-m32"
+cmake --build build -j"$(nproc)"
+```
+
+The Linux build outputs are written to:
+
+- `build/artifact/plugins/discord-connector.so`
+- `build/artifact/log-core2.so`
+- `build/artifact/pawno/include/discord-connector.inc`
 
 ## Installation
 
