@@ -54,6 +54,19 @@ The Windows build outputs are written to:
 - `build/artifact/log-core2.dll`
 - `build/artifact/pawno/include/discord-connector.inc`
 
+## GitHub Actions and releases
+
+The `Build` workflow compiles a Windows x86 Release package and uploads a zip as a workflow artifact.
+
+To publish a GitHub Release with the zip attached, push a version tag:
+
+```powershell
+git tag v0.3.6
+git push origin v0.3.6
+```
+
+The release asset is named `discord-connector-<tag>-win32.zip`.
+
 ## Linux build
 
 The project also builds on Linux as a 32-bit plugin when the required 32-bit libraries are available.
