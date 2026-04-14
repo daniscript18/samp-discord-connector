@@ -64,6 +64,13 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force -Path build/artifact/plugins | Out-Null
+          $plugin = Get-ChildItem -Path build -Recurse -Filter discord-connector.dll | Select-Object -First 1
+          $logCore = Get-ChildItem -Path build -Recurse -Filter log-core2.dll | Select-Object -First 1
+          if (-not $plugin) { throw "discord-connector.dll was not produced" }
+          if (-not $logCore) { throw "log-core2.dll was not produced" }
+          Copy-Item -LiteralPath $plugin.FullName -Destination build/artifact/plugins/discord-connector.dll -Force
+          Copy-Item -LiteralPath $logCore.FullName -Destination build/artifact/log-core2.dll -Force
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Compress-Archive -Path build/artifact/* -DestinationPath "dist/$env:PACKAGE_NAME.zip" -Force
 
