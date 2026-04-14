@@ -2,6 +2,14 @@
 
 This project builds a Discord bot connector plugin for SA-MP / open.mp servers.
 
+## Credits
+
+Original project by maddinat0r:
+
+- https://github.com/maddinat0r/samp-discord-connector
+
+This continuation is maintained by daniscript18, with ongoing work on Windows/Linux builds, packaging, release automation, and project support.
+
 ## What it produces
 
 - `discord-connector.dll` on Windows
@@ -53,22 +61,6 @@ The Windows build outputs are written to:
 - `build/artifact/plugins/discord-connector.dll`
 - `build/artifact/log-core2.dll`
 - `build/artifact/pawno/include/discord-connector.inc`
-
-## GitHub Actions and releases
-
-The `Build` workflow compiles Windows x86 and Linux i386 Release packages and uploads each zip as a workflow artifact.
-
-To publish a GitHub Release with the zip attached, push a version tag:
-
-```powershell
-git tag v0.3.6
-git push origin v0.3.6
-```
-
-The release assets are named:
-
-- `discord-connector-<tag>-win32.zip`
-- `discord-connector-<tag>-linux-i386.zip`
 
 ## Linux build
 
