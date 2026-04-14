@@ -52,7 +52,7 @@ jobs:
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86
           cmake -S . -B build ^
             -G "%CMAKE_GENERATOR%" ^
-            -DCMAKE_BUILD_TYPE=%BUILD_TYPE% ^
+            -DCMAKE_BUILD_TYPE=Release ^
             -DDCC_VERSION="%REPO_TAG%"
 
       - name: Build
