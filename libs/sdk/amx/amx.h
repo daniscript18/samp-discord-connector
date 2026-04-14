@@ -31,7 +31,10 @@
 #ifndef AMX_H_INCLUDED
 #define AMX_H_INCLUDED
 
-#if defined HAVE_STDINT_H
+#if defined _MSC_VER
+  #include <stdint.h>
+  #define HAVE_STDINT_H
+#elif defined HAVE_STDINT_H
   #include <stdint.h>
 #else
   #if defined __LCC__ || defined __DMC__ || defined LINUX

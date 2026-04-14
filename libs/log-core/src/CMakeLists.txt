@@ -70,6 +70,12 @@ target_compile_features(log-core PUBLIC
 
 set_target_properties(log-core PROPERTIES PREFIX "")
 set_target_properties(log-core PROPERTIES OUTPUT_NAME "log-core2")
+if(MSVC)
+	set_target_properties(log-core PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY $<1:${CMAKE_BINARY_DIR}/artifact>
+		LIBRARY_OUTPUT_DIRECTORY $<1:${CMAKE_BINARY_DIR}/artifact>
+	)
+endif()
 
 set(FMT_INCLUDE_DIRS "")
 if(TARGET CONAN_PKG::fmt)
@@ -123,10 +129,15 @@ elseif(UNIX)
 	)
 endif()
 
+set(LOGCORE_YAML_CPP_TARGET yaml-cpp)
+if(TARGET CONAN_PKG::yaml-cpp)
+	set(LOGCORE_YAML_CPP_TARGET CONAN_PKG::yaml-cpp)
+endif()
+
 target_link_libraries(log-core PRIVATE
 	amx
 	CONAN_PKG::fmt
-	yaml-cpp
+	${LOGCORE_YAML_CPP_TARGET}
 )
 
 if(LOGCORE_INSTALL_DEV)
