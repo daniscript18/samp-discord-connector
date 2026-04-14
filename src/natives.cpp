@@ -2346,6 +2346,58 @@ AMX_DECLARE_NATIVE(Native::DCC_SendUserMessage)
 	return 1;
 }
 
+// native DCC_SendUserEmbedMessage(DCC_User:user, DCC_Embed:embed, const message[] = "",
+//		const callback[] = "", const format[] = "", {Float, _}:...);
+AMX_DECLARE_NATIVE(Native::DCC_SendUserEmbedMessage)
+{
+	ScopedDebugInfo dbg_info(amx, "DCC_SendUserEmbedMessage", params, "ddsss");
+
+	auto userid = static_cast<UserId_t>(params[1]);
+	auto const &user = UserManager::Get()->FindUser(userid);
+	if (!user)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR, "invalid user id '{}'", userid);
+		return 0;
+	}
+
+	EmbedId_t embedid = static_cast<EmbedId_t>(params[2]);
+	Embed_t const& embed = EmbedManager::Get()->FindEmbed(embedid);
+	if (!embed)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR, "invalid embed id '{}'", embedid);
+		return 0;
+	}
+
+	auto message = amx_GetCppString(amx, params[3]);
+	if (message.length() > 2000)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"message must be shorter than 2000 characters");
+		return 0;
+	}
+
+	auto
+		cb_name = amx_GetCppString(amx, params[4]),
+		cb_format = amx_GetCppString(amx, params[5]);
+
+	pawn_cb::Error cb_error;
+	auto cb = pawn_cb::Callback::Prepare(
+		amx, cb_name.c_str(), cb_format.c_str(), params, 6, cb_error);
+	if (cb_error && cb_error.get() != pawn_cb::Error::Type::EMPTY_NAME)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR, "could not prepare callback");
+		return 0;
+	}
+
+	auto const sent = ThisBot::Get()->SendUserEmbedMessage(user, embed, std::move(message), std::move(cb));
+	if (!sent)
+		return 0;
+
+	EmbedManager::Get()->DeleteEmbed(embedid);
+	Logger::Get()->LogNative(samplog_LogLevel::DEBUG, "return value: '1'");
+	return 1;
+}
+
 // native DCC_Channel:DCC_GetCreatedPrivateChannel();
 AMX_DECLARE_NATIVE(Native::DCC_GetCreatedPrivateChannel)
 {

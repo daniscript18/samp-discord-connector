@@ -37,6 +37,8 @@ public:
 
 	bool CreatePrivateChannel(User_t const &user, pawn_cb::Callback_t &&callback);
 	bool SendUserMessage(User_t const &user, std::string &&message, pawn_cb::Callback_t &&callback);
+	bool SendUserEmbedMessage(User_t const &user, Embed_t const &embed, std::string &&message,
+		pawn_cb::Callback_t &&callback);
 	ChannelId_t GetCreatedPrivateChannelId() const
 	{
 		return m_CreatedChannelId;

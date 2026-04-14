@@ -181,6 +181,7 @@ stock DCC_ClearBotNickname(DCC_Guild:guild)
 }
 native DCC_CreatePrivateChannel(DCC_User:user, const callback[], const format[] = "", {Float, _}:...);
 native DCC_SendUserMessage(DCC_User:user, const message[], const callback[] = "", const format[] = "", {Float, _}:...);
+native DCC_SendUserEmbedMessage(DCC_User:user, DCC_Embed:embed, const message[] = "", const callback[] = "", const format[] = "", {Float, _}:...);
 native DCC_Channel:DCC_GetCreatedPrivateChannel();
 native DCC_SetBotPresenceStatus(DCC_BotPresenceStatus:status);
 native DCC_SetBotActivity(const name[]);

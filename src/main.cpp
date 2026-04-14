@@ -270,6 +270,7 @@ extern "C" const AMX_NATIVE_INFO native_list[] =
 	AMX_DEFINE_NATIVE(DCC_SetBotNickname)
 	AMX_DEFINE_NATIVE(DCC_CreatePrivateChannel)
 	AMX_DEFINE_NATIVE(DCC_SendUserMessage)
+	AMX_DEFINE_NATIVE(DCC_SendUserEmbedMessage)
 	AMX_DEFINE_NATIVE(DCC_GetCreatedPrivateChannel)
 	AMX_DEFINE_NATIVE(DCC_SetBotPresenceStatus)
 	AMX_DEFINE_NATIVE(DCC_SetBotActivity)

@@ -104,6 +104,7 @@ namespace Native
 	AMX_DECLARE_NATIVE(DCC_SetBotNickname);
 	AMX_DECLARE_NATIVE(DCC_CreatePrivateChannel);
 	AMX_DECLARE_NATIVE(DCC_SendUserMessage);
+	AMX_DECLARE_NATIVE(DCC_SendUserEmbedMessage);
 	AMX_DECLARE_NATIVE(DCC_GetCreatedPrivateChannel);
 	AMX_DECLARE_NATIVE(DCC_SetBotPresenceStatus);
 	AMX_DECLARE_NATIVE(DCC_SetBotActivity);
