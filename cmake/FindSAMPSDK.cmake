@@ -1,0 +1,8 @@
+set(SAMPSDK_DIR "${PROJECT_SOURCE_DIR}/libs/sdk")
+set(SAMPSDK_INCLUDE_DIR "${SAMPSDK_DIR}")
+set(SAMPSDK_INCLUDE_DIRS "${SAMPSDK_INCLUDE_DIR}")
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(SAMPSDK
+	REQUIRED_VARS SAMPSDK_DIR SAMPSDK_INCLUDE_DIR
+)
