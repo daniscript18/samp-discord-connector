@@ -1,50 +1,74 @@
-# Discord connector plugin for San Andreas Multiplayer (SA:MP)
+# Discord connector plugin for SA-MP and open.mp
 
-| AppVeyor CI | Total downloads | Latest release |
-| :---: | :---: | :---: |
-|  ![Build status](https://github.com/maddinat0r/samp-discord-connector/workflows/Build/badge.svg)|  [![All Releases](https://img.shields.io/github/downloads/maddinat0r/samp-discord-connector/total.svg?maxAge=86400)](https://github.com/maddinat0r/samp-discord-connector/releases)  |  [![latest release](https://img.shields.io/github/release/maddinat0r/samp-discord-connector.svg?maxAge=86400)](https://github.com/maddinat0r/samp-discord-connector/releases) <br> [![Github Releases](https://img.shields.io/github/downloads/maddinat0r/samp-discord-connector/latest/total.svg?maxAge=86400)](https://github.com/maddinat0r/samp-discord-connector/releases)  |  
--------------------------------------------------
-**This plugin allows you to control a Discord bot from within your PAWN script.**
+This project builds a Discord bot connector plugin for SA-MP / open.mp servers.
 
-**How to install on an open.mp server**
------------------------------------
-1. Extract the contents of the archive to a directory, copy the file(s) in plugins into **COMPONENTS** if you do not do this, it will try to load as a SA:MP plugin instead.
-2. Edit your configuration file (**config.json**) as follows:
-   ```json
-      "discord": {
-         "bot_token": "MYBOTTOKEN"
-      }
-    ```
-   Alternatively you can use the enviromental variable **DCC_BOT_TOKEN** to set the token instead. **DO NOT SHARE YOUR TOKEN WITH ANYONE**
+## What it produces
 
-How to install on a SA:MP server
---------------------------------
-1. Extract the content of the downloaded archive into the root directory of your SA-MP server.
-2. Edit the server configuration (*server.cfg*) as follows:
-   - Windows: `plugins discord-connector`
-   - Linux: `plugins discord-connector.so`
-3. Add `discord_bot_token YOURDISCORDBOTTOKEN` to your *server.cfg* file, or set it in the environment variable `DCC_BOT_TOKEN` (__never share your bot token with anyone!__)
+- `discord-connector.dll` on Windows
+- `discord-connector.so` on Linux
+- `log-core2.dll` or `log-core2.so` as the logging helper library
 
-I am getting a intent error, how do I fix it?
----------------
-If you're getting an intent error, you need to go to the [discord developer dashboard](https://discord.com/developers/applications) and select your bot.
-Then, you need to go to your bot settings and activate your intents.
+## Windows build
 
-Build instruction
----------------
-*Note*: The plugin has to be a 32-bit library; that means all required libraries have to be compiled in 32-bit and the compiler has to support 32-bit.
-#### Windows
-1. install a C++ compiler of your choice
-2. install [CMake](http://www.cmake.org/)
-3. install [Conan](https://conan.io)
-4. clone this repository recursively (`git clone --recursive https://...`)
-5. create a folder named `build` and execute CMake in there
-6. build the generated project files with your C++ compiler
+Use a 32-bit toolchain. This plugin is meant to be built as x86, not x64.
 
-#### Linux
-1. install a C++ compiler of your choice
-2. install [CMake](http://www.cmake.org/)
-3. install [Conan](https://conan.io)
-4. clone this repository recursively (`git clone --recursive https://...`)
-5. create a folder named `build` and execute CMake in there (`mkdir build && cd build && cmake ..`)
-6. build the generated project files with your C++ compiler
+### Prerequisites
+
+- Git
+- CMake 3.15 or newer
+- A C++ compiler for Windows
+- Conan 1.x
+
+### Build steps
+
+1. Clone this repository.
+2. Make sure submodules are present if you cloned from a remote:
+   ```bash
+   git submodule update --init --recursive
+   ```
+3. Create a build directory:
+   ```bash
+   mkdir build
+   cd build
+   ```
+4. Configure CMake for a 32-bit build.
+   - With Visual Studio:
+     ```bash
+     cmake .. -A Win32 -DCMAKE_BUILD_TYPE=Release
+     ```
+   - With MinGW or another single-config generator, use the equivalent x86 toolchain setup.
+5. Build the project:
+   ```bash
+   cmake --build . --config Release
+   ```
+
+## Linux build
+
+The project also builds on Linux as a 32-bit plugin when the required 32-bit libraries are available.
+
+```bash
+mkdir build
+cd build
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_FLAGS=-m32 \
+  -DCMAKE_CXX_FLAGS=-m32
+cmake --build . -j"$(nproc)"
+```
+
+## Installation
+
+For SA-MP, copy the plugin into your server's `plugins` directory and add it to `server.cfg`.
+
+- Windows: `plugins discord-connector`
+- Linux: `plugins discord-connector.so`
+
+For open.mp, place the plugin in the `components` directory if you want it loaded as a component.
+
+## Configuration
+
+Set your Discord bot token in the server configuration or environment:
+
+- `DCC_BOT_TOKEN`
+
+Never share your bot token publicly.

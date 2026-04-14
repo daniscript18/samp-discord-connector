@@ -1,5 +1,12 @@
 build/
+build-*/
+cmake-build-*/
+out/
 bin/
+artifact/
+.vs/
+.idea/
+.vscode/
 
 # Compiled Object files
 *.slo
@@ -30,3 +37,26 @@ bin/
 *.exe
 *.out
 *.app
+
+# IDE / CMake / Conan
+*.suo
+*.user
+*.userosscache
+*.VC.db
+*.VC.opendb
+*.ipch
+*.pdb
+cmake_install.cmake
+CMakeCache.txt
+CMakeFiles/
+conanbuildinfo.cmake
+conanbuildinfo.txt
+conaninfo.txt
+graph_info.json
+generators/
+
+# Archives
+*.zip
+*.7z
+*.tar
+*.gz
