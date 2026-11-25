@@ -31,6 +31,10 @@ using Embed_t = std::unique_ptr<class Embed>;
 using EmbedId_t = cell;
 const EmbedId_t INVALID_EMBED_ID = 0;
 
+using Modal_t = std::unique_ptr<class Modal>;
+using ModalId_t = cell;
+const ModalId_t INVALID_MODAL_ID = 0;
+
 using Emoji_t = std::unique_ptr<class Emoji>;
 using EmojiId_t = cell;
 const EmojiId_t INVALID_EMOJI_ID = 0;

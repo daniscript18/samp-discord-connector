@@ -11,6 +11,7 @@
 #include "Logger.hpp"
 #include "Callback.hpp"
 #include "Embed.hpp"
+#include "Modal.hpp"
 #include "Emoji.hpp"
 #include "Command.hpp"
 #include "CommandInteraction.hpp"
@@ -294,6 +295,61 @@ AMX_DECLARE_NATIVE(Native::DCC_SendChannelMessage)
 	channel->SendMessage(std::move(message), std::move(cb));
 
 	Logger::Get()->LogNative(samplog_LogLevel::DEBUG, "return value: '1'");
+	return 1;
+}
+
+// native DCC_SendChannelMessageWithButton(DCC_Channel:channel, const message[],
+//		const label[], const custom_id[], style = 1, const callback[] = "",
+//		const format[] = "", {Float, _}:...);
+AMX_DECLARE_NATIVE(Native::DCC_SendChannelMessageWithButton)
+{
+	ScopedDebugInfo dbg_info(amx, "DCC_SendChannelMessageWithButton", params, "dsssdss");
+
+	ChannelId_t channelid = static_cast<ChannelId_t>(params[1]);
+	Channel_t const& channel = ChannelManager::Get()->FindChannel(channelid);
+	if (!channel)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR, "invalid channel id '{}'", channelid);
+		return 0;
+	}
+
+	auto message = amx_GetCppString(amx, params[2]);
+	auto label = amx_GetCppString(amx, params[3]);
+	auto custom_id = amx_GetCppString(amx, params[4]);
+	auto style = static_cast<int>(params[5]);
+	if (message.length() > 2000 || label.empty() || label.length() > 80
+		|| custom_id.empty() || custom_id.length() > 100 || style < 1 || style > 4)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"invalid button message: message must be <= 2000 characters, label 1-80, "
+			"custom_id 1-100, and style 1-4");
+		return 0;
+	}
+
+	auto cb_name = amx_GetCppString(amx, params[6]);
+	auto cb_format = amx_GetCppString(amx, params[7]);
+	pawn_cb::Error cb_error;
+	auto cb = pawn_cb::Callback::Prepare(
+		amx, cb_name.c_str(), cb_format.c_str(), params, 8, cb_error);
+	if (cb_error && cb_error.get() != pawn_cb::Error::Type::EMPTY_NAME)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR, "could not prepare callback");
+		return 0;
+	}
+
+	json button = {
+		{ "type", 2 },
+		{ "style", style },
+		{ "label", label },
+		{ "custom_id", custom_id }
+	};
+	json components = json::array({
+		{
+			{ "type", 1 },
+			{ "components", json::array({ button }) }
+		}
+	});
+	channel->SendMessage(std::move(message), std::move(cb), components);
 	return 1;
 }
 
@@ -3221,6 +3277,140 @@ AMX_DECLARE_NATIVE(Native::DCC_SendInteractionMessage)
 
 	interaction->SendInteractionMessage(message);
 	Logger::Get()->LogNative(samplog_LogLevel::DEBUG, "return value: '1'");
+	return 1;
+}
+
+// native DCC_GetInteractionCustomId(DCC_Interaction:interaction, dest[], max_size = sizeof dest);
+AMX_DECLARE_NATIVE(Native::DCC_GetInteractionCustomId)
+{
+	ScopedDebugInfo dbg_info(amx, "DCC_GetInteractionCustomId", params, "dsd");
+	auto const& interaction =
+		CommandInteractionManager::Get()->FindCommandInteraction(params[1]);
+	if (!interaction)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"invalid interaction id '{}'", params[1]);
+		return 0;
+	}
+	return amx_SetCppString(amx, params[2], interaction->GetCustomId(), params[3])
+		== AMX_ERR_NONE;
+}
+
+// native DCC_GetModalInputValue(DCC_Interaction:interaction, const custom_id[], dest[], max_size = sizeof dest);
+AMX_DECLARE_NATIVE(Native::DCC_GetModalInputValue)
+{
+	ScopedDebugInfo dbg_info(amx, "DCC_GetModalInputValue", params, "dssd");
+	auto const& interaction =
+		CommandInteractionManager::Get()->FindCommandInteraction(params[1]);
+	if (!interaction)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"invalid interaction id '{}'", params[1]);
+		return 0;
+	}
+	auto const custom_id = amx_GetCppString(amx, params[2]);
+	auto const* value = interaction->GetModalInputValue(custom_id);
+	if (!value)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"modal input '{}' was not submitted", custom_id);
+		return 0;
+	}
+	return amx_SetCppString(amx, params[3], *value, params[4]) == AMX_ERR_NONE;
+}
+
+// native DCC_DeferInteraction(DCC_Interaction:interaction, bool:update_message = false);
+AMX_DECLARE_NATIVE(Native::DCC_DeferInteraction)
+{
+	ScopedDebugInfo dbg_info(amx, "DCC_DeferInteraction", params, "db");
+	auto const& interaction =
+		CommandInteractionManager::Get()->FindCommandInteraction(params[1]);
+	if (!interaction)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"invalid interaction id '{}'", params[1]);
+		return 0;
+	}
+	json response = { { "type", params[2] ? 6 : 5 } };
+	return interaction->Respond(response);
+}
+
+// native DCC_Modal:DCC_CreateModal(const custom_id[], const title[]);
+AMX_DECLARE_NATIVE(Native::DCC_CreateModal)
+{
+	ScopedDebugInfo dbg_info(amx, "DCC_CreateModal", params, "ss");
+	auto const custom_id = amx_GetCppString(amx, params[1]);
+	auto const title = amx_GetCppString(amx, params[2]);
+	auto const id = ModalManager::Get()->AddModal(custom_id, title);
+	if (!id)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"modal custom_id must be 1-100 characters and title 1-45 characters");
+	}
+	return id;
+}
+
+// native DCC_AddModalTextInput(DCC_Modal:modal, const custom_id[], const label[],
+//		DCC_ModalTextInputStyle:style = DCC_MODAL_SHORT, const placeholder[] = "",
+//		bool:required = true, min_length = 0, max_length = 4000);
+AMX_DECLARE_NATIVE(Native::DCC_AddModalTextInput)
+{
+	ScopedDebugInfo dbg_info(amx, "DCC_AddModalTextInput", params, "dssdsddd");
+	auto const& modal = ModalManager::Get()->FindModal(params[1]);
+	if (!modal)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR, "invalid modal id '{}'", params[1]);
+		return 0;
+	}
+	auto const custom_id = amx_GetCppString(amx, params[2]);
+	auto const label = amx_GetCppString(amx, params[3]);
+	auto const style = static_cast<int>(params[4]);
+	auto const placeholder = amx_GetCppString(amx, params[5]);
+	auto const required = static_cast<bool>(params[6]);
+	auto const min_length = static_cast<int>(params[7]);
+	auto const max_length = static_cast<int>(params[8]);
+	if (!modal->AddTextInput(custom_id, label, style, placeholder,
+		required, min_length, max_length))
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"invalid modal input: max 5 inputs; ids 1-100; labels 1-45; "
+			"placeholder <= 100; style 1-2; lengths 0 <= min <= max <= 4000");
+		return 0;
+	}
+	return 1;
+}
+
+// native DCC_ShowModal(DCC_Interaction:interaction, DCC_Modal:modal);
+AMX_DECLARE_NATIVE(Native::DCC_ShowModal)
+{
+	ScopedDebugInfo dbg_info(amx, "DCC_ShowModal", params, "dd");
+	auto const& interaction =
+		CommandInteractionManager::Get()->FindCommandInteraction(params[1]);
+	if (!interaction)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"invalid interaction id '{}'", params[1]);
+		return 0;
+	}
+	auto const& modal = ModalManager::Get()->FindModal(params[2]);
+	if (!modal || modal->GetInputCount() == 0)
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR,
+			"invalid modal id '{}' or modal has no inputs", params[2]);
+		return 0;
+	}
+	return interaction->Respond({ { "type", 9 }, { "data", modal->ToJson() } });
+}
+
+// native DCC_DeleteModal(DCC_Modal:modal);
+AMX_DECLARE_NATIVE(Native::DCC_DeleteModal)
+{
+	ScopedDebugInfo dbg_info(amx, "DCC_DeleteModal", params, "d");
+	if (!ModalManager::Get()->DeleteModal(params[1]))
+	{
+		Logger::Get()->LogNative(samplog_LogLevel::ERROR, "invalid modal id '{}'", params[1]);
+		return 0;
+	}
 	return 1;
 }
 

@@ -52,6 +52,8 @@ add_samp_plugin(discord-connector
 	WebSocket.hpp
 	Embed.cpp
 	Embed.hpp
+	Modal.cpp
+	Modal.hpp
 	Emoji.cpp
 	Emoji.hpp
 	Command.cpp

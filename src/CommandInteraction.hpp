@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include <json.hpp>
 #include <boost/variant.hpp>
@@ -25,7 +26,8 @@ struct CommandInteractionOption
 class CommandInteraction
 {
 public:
-	CommandInteraction(CommandInteractionId_t id, UserId_t user, nlohmann::json const& interaction_json);
+	CommandInteraction(CommandInteractionId_t id, UserId_t user, nlohmann::json const& interaction_json,
+		bool acknowledged);
 	~CommandInteraction() = default;
 	void ParseOptions(nlohmann::json const& interaction_json, std::string const& guildid);
 	void AddInteractionOption(CommandInteractionOption_t &option);
@@ -55,6 +57,18 @@ public:
 		return m_InteractionOptions;
 	}
 
+	std::string const& GetCustomId() const
+	{
+		return m_CustomId;
+	}
+
+	std::string const* GetModalInputValue(std::string const& custom_id) const
+	{
+		auto it = m_ModalInputs.find(custom_id);
+		return it == m_ModalInputs.end() ? nullptr : &it->second;
+	}
+
+	bool Respond(json const& response);
 	void SendEmbed(EmbedId_t embedid, const std::string message = "");
 	void SendInteractionMessage(const std::string message);
 
@@ -62,11 +76,14 @@ private:
 	CommandInteractionId_t m_ID;
 	Snowflake_t m_IDSnowflake;
 	Snowflake_t m_Token;
+	std::string m_CustomId;
 	ChannelId_t m_Channel;
 	GuildId_t m_Guild = 0;
 	UserId_t m_InteractionUser;
+	bool m_Acknowledged;
 	std::vector<CommandInteractionOption_t> m_InteractionOptions;
 	std::vector<UserId_t> m_Mentions;
+	std::map<std::string, std::string> m_ModalInputs;
 };
 
 class CommandInteractionManager : public Singleton<CommandInteractionManager>
@@ -80,7 +97,8 @@ private:
 	std::map<CommandInteractionId_t, CommandInteraction_t> m_Interactions;
 public:
 	CommandInteraction_t const& FindCommandInteraction(CommandInteractionId_t interaction);
-	CommandInteractionId_t AddCommandInteraction(UserId_t user, nlohmann::json const& interaction_json);
+	CommandInteractionId_t AddCommandInteraction(UserId_t user, nlohmann::json const& interaction_json,
+		bool acknowledged);
 	bool DeleteCommandInteraction(CommandInteractionId_t interaction);
 
 	CommandInteractionId_t m_CurrentInteractionID = 0;

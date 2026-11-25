@@ -84,11 +84,15 @@ void Channel::UpdateParentChannel(Snowflake_t const &parent_id)
 	m_ParentId = channel->GetPawnId();
 }
 
-void Channel::SendMessage(std::string &&msg, pawn_cb::Callback_t &&cb)
+void Channel::SendMessage(std::string &&msg, pawn_cb::Callback_t &&cb, json const& components)
 {
 	json data = {
 		{ "content", std::move(msg) }
 	};
+	if (!components.empty())
+	{
+		data["components"] = components;
+	}
 
 	std::string json_str;
 	if (!utils::TryDumpJson(data, json_str))

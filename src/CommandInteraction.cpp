@@ -13,57 +13,117 @@
 #include "Http.hpp"
 #include <json.hpp>
 #include <regex>
+#include <functional>
 
-CommandInteraction::CommandInteraction(CommandInteractionId_t id, UserId_t user, nlohmann::json const& interaction_json) :
-	m_InteractionUser(user)
+CommandInteraction::CommandInteraction(CommandInteractionId_t id, UserId_t user,
+	nlohmann::json const& interaction_json, bool acknowledged) :
+	m_InteractionUser(user),
+	m_Acknowledged(acknowledged)
 {
 	m_ID = id;
 	m_IDSnowflake = interaction_json.at("id").get<std::string>();
 	m_Token = interaction_json.at("token").get<std::string>();
-	
-	std::string dump;
-	utils::TryDumpJson(interaction_json, dump);
 
-	std::string name = interaction_json.at("data").at("name").get<std::string>();
-	
 	std::string guild_str = "";
-	bool has_guild = utils::TryGetJsonValue(interaction_json.at("data"), guild_str, "guild_id");
-	if (has_guild )
+	bool has_guild = utils::TryGetJsonValue(interaction_json, guild_str, "guild_id");
+	if (has_guild && interaction_json.at("type").get<int>() != 2)
 	{
-		
-		auto & guild = GuildManager::Get()->FindGuildById(guild_str);
-		auto & command = CommandManager::Get()->FindCommand(CommandManager::Get()->FindCommandIdByName(name, guild->GetPawnId()));
-		if (!guild || command->GetGuild() != guild->GetPawnId())
+		auto const& guild = GuildManager::Get()->FindGuildById(guild_str);
+		if (guild)
 		{
-			Logger::Get()->Log(samplog_LogLevel::WARNING, "recieved a command interaction for command {} (guild {}) but the callee guild doesn't match", name, guild_str);
-			return;
+			m_Guild = guild->GetPawnId();
 		}
-
-		m_Guild = guild->GetPawnId();
+	}
+	if (interaction_json.at("type").get<int>() == 2)
+	{
+		std::string name = interaction_json.at("data").at("name").get<std::string>();
+		if (has_guild)
+		{
+			auto const& guild = GuildManager::Get()->FindGuildById(guild_str);
+			if (!guild)
+			{
+				Logger::Get()->Log(samplog_LogLevel::WARNING,
+					"received command interaction for unknown guild '{}'", guild_str);
+				return;
+			}
+			auto const& command = CommandManager::Get()->FindCommand(
+				CommandManager::Get()->FindCommandIdByName(name, guild->GetPawnId()));
+			if (!command || command->GetGuild() != guild->GetPawnId())
+			{
+				Logger::Get()->Log(samplog_LogLevel::WARNING,
+					"received command interaction for command '{}' in mismatched guild '{}'", name, guild_str);
+				return;
+			}
+			m_Guild = guild->GetPawnId();
+		}
+		else
+		{
+			auto const& command = CommandManager::Get()->FindCommand(
+				CommandManager::Get()->FindCommandIdByName(name));
+			if (!command)
+			{
+				Logger::Get()->Log(samplog_LogLevel::WARNING,
+					"received command interaction for unknown command '{}'", name);
+				return;
+			}
+		}
 	}
 	else
 	{
-		auto& command = CommandManager::Get()->FindCommand(CommandManager::Get()->FindCommandIdByName(name));
-		if (!command)
+		utils::TryGetJsonValue(interaction_json.at("data"), m_CustomId, "custom_id");
+		if (interaction_json.at("type").get<int>() == 5)
 		{
-			Logger::Get()->Log(samplog_LogLevel::WARNING, "recieved a command interaction for command {} but no command exists", name);
-			return;
+			std::function<void(json const&)> read_components = [&](json const& node)
+			{
+				if (!node.is_object())
+				{
+					return;
+				}
+				std::string custom_id;
+				std::string value;
+				if (utils::TryGetJsonValue(node, custom_id, "custom_id")
+					&& utils::TryGetJsonValue(node, value, "value"))
+				{
+					m_ModalInputs[custom_id] = value;
+				}
+				auto children = node.find("components");
+				if (children != node.end() && children->is_array())
+				{
+					for (auto const& child : *children)
+					{
+						read_components(child);
+					}
+				}
+			};
+			auto components = interaction_json.at("data").find("components");
+			if (components != interaction_json.at("data").end() && components->is_array())
+			{
+				for (auto const& component : *components)
+				{
+					read_components(component);
+				}
+			}
 		}
 	}
 
-	std::string channel_str = interaction_json.at("channel_id").get<std::string>();
+	std::string channel_str;
+	utils::TryGetJsonValue(interaction_json, channel_str, "channel_id");
 	Channel_t const & channel = ChannelManager::Get()->FindChannelById(channel_str);
 	if (!channel && !has_guild)
 	{
 		ChannelId_t cid = ChannelManager::Get()->AddDMChannel(interaction_json);
-		m_Channel = ChannelManager::Get()->FindChannel(cid)->GetPawnId();
+		Channel_t const& dm_channel = ChannelManager::Get()->FindChannel(cid);
+		m_Channel = dm_channel ? dm_channel->GetPawnId() : INVALID_CHANNEL_ID;
 	}
 	else
 	{
 		m_Channel = channel ? channel->GetPawnId() : INVALID_CHANNEL_ID;
 	}
 	m_InteractionUser = user;
-	ParseOptions(interaction_json, has_guild ? guild_str : "");
+	if (interaction_json.at("type").get<int>() == 2)
+	{
+		ParseOptions(interaction_json, has_guild ? guild_str : "");
+	}
 }
 
 void CommandInteraction::ParseOptions(nlohmann::json const& interaction_json, std::string const & guildid)
@@ -117,6 +177,28 @@ void CommandInteraction::ParseOptions(nlohmann::json const& interaction_json, st
 void CommandInteraction::AddInteractionOption(CommandInteractionOption_t & option)
 {
 	m_InteractionOptions.push_back(std::move(option));
+}
+
+bool CommandInteraction::Respond(json const& response)
+{
+	if (m_Acknowledged)
+	{
+		Logger::Get()->Log(samplog_LogLevel::WARNING,
+			"interaction '{}' has already been acknowledged", m_IDSnowflake);
+		return false;
+	}
+
+	std::string json_str;
+	if (!utils::TryDumpJson(response, json_str))
+	{
+		Logger::Get()->Log(samplog_LogLevel::ERROR, "can't serialize interaction response: {}", json_str);
+		return false;
+	}
+
+	m_Acknowledged = true;
+	Network::Get()->Http().Post(
+		fmt::format("/interactions/{:s}/{:s}/callback", m_IDSnowflake, m_Token), json_str);
+	return true;
 }
 
 void CommandInteraction::SendEmbed(EmbedId_t embedid, const std::string message)
@@ -173,6 +255,12 @@ void CommandInteraction::SendEmbed(EmbedId_t embedid, const std::string message)
 	if (!utils::TryDumpJson(data, json_str))
 		Logger::Get()->Log(samplog_LogLevel::ERROR, "can't serialize JSON: {}", json_str);
 
+	if (!m_Acknowledged)
+	{
+		Respond({ { "type", 4 }, { "data", data } });
+		return;
+	}
+
 	/*/webhooks/{application.id}/{interaction.token}/messages/@original*/
 	Network::Get()->Http().Patch(fmt::format("/webhooks/{:s}/{:s}/messages/@original", ThisBot::Get()->GetApplicationID(), m_Token), json_str);
 }
@@ -187,6 +275,12 @@ void CommandInteraction::SendInteractionMessage(const std::string message)
 	if (!utils::TryDumpJson(data, json_str))
 		Logger::Get()->Log(samplog_LogLevel::ERROR, "can't serialize JSON: {}", json_str);
 
+	if (!m_Acknowledged)
+	{
+		Respond({ { "type", 4 }, { "data", data } });
+		return;
+	}
+
 	/*/webhooks/{application.id}/{interaction.token}/messages/@original*/
 	Network::Get()->Http().Patch(fmt::format("/webhooks/{:s}/{:s}/messages/@original", ThisBot::Get()->GetApplicationID(), m_Token), json_str);
 }
@@ -200,13 +294,15 @@ CommandInteraction_t const & CommandInteractionManager::FindCommandInteraction(C
 	return it->second;
 }
 
-CommandInteractionId_t CommandInteractionManager::AddCommandInteraction(UserId_t user, nlohmann::json const& interaction_json)
+CommandInteractionId_t CommandInteractionManager::AddCommandInteraction(UserId_t user,
+	nlohmann::json const& interaction_json, bool acknowledged)
 {
 	CommandInteractionId_t id = 1;
 	while (m_Interactions.find(id) != m_Interactions.end())
 		++id;
 
-	if (!m_Interactions.emplace(id, CommandInteraction_t(new CommandInteraction(id, user, interaction_json))).first->second)
+	if (!m_Interactions.emplace(id, CommandInteraction_t(
+		new CommandInteraction(id, user, interaction_json, acknowledged))).first->second)
 	{
 		Logger::Get()->Log(samplog_LogLevel::ERROR,
 			"can't create command interaction: duplicate key '{}'", id);

@@ -23,6 +23,7 @@ namespace Native
 	AMX_DECLARE_NATIVE(DCC_IsChannelNsfw);
 	AMX_DECLARE_NATIVE(DCC_GetChannelParentCategory);
 	AMX_DECLARE_NATIVE(DCC_SendChannelMessage);
+	AMX_DECLARE_NATIVE(DCC_SendChannelMessageWithButton);
 	AMX_DECLARE_NATIVE(DCC_SetChannelName);
 	AMX_DECLARE_NATIVE(DCC_SetChannelTopic);
 	AMX_DECLARE_NATIVE(DCC_SetChannelPosition);
@@ -145,5 +146,12 @@ namespace Native
 	AMX_DECLARE_NATIVE(DCC_GetInteractionGuild);
 	AMX_DECLARE_NATIVE(DCC_SendInteractionEmbed);
 	AMX_DECLARE_NATIVE(DCC_SendInteractionMessage);
+	AMX_DECLARE_NATIVE(DCC_GetInteractionCustomId);
+	AMX_DECLARE_NATIVE(DCC_GetModalInputValue);
+	AMX_DECLARE_NATIVE(DCC_DeferInteraction);
+	AMX_DECLARE_NATIVE(DCC_CreateModal);
+	AMX_DECLARE_NATIVE(DCC_AddModalTextInput);
+	AMX_DECLARE_NATIVE(DCC_ShowModal);
+	AMX_DECLARE_NATIVE(DCC_DeleteModal);
 	AMX_DECLARE_NATIVE(DCC_DeleteCommand);
 }

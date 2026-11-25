@@ -91,7 +91,7 @@ public:
 		return m_ParentId;
 	}
 
-	void SendMessage(std::string &&msg, pawn_cb::Callback_t &&cb);
+	void SendMessage(std::string &&msg, pawn_cb::Callback_t &&cb, json const& components = json::array());
 	void SendEmbeddedMessage(const Embed_t & embed, std::string&& msg, pawn_cb::Callback_t&& cb);
 	void SetChannelName(std::string const &name);
 	void SetChannelTopic(std::string const &topic);

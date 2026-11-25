@@ -47,6 +47,20 @@ enum DCC_MessageReactionType
 	REACTION_REMOVE_EMOJI // Sent when a bot removes all instances of a given emoji from the reactions of a message.
 };
 
+enum DCC_ButtonStyle
+{
+	DCC_BUTTON_PRIMARY = 1,
+	DCC_BUTTON_SECONDARY,
+	DCC_BUTTON_SUCCESS,
+	DCC_BUTTON_DANGER
+};
+
+enum DCC_ModalTextInputStyle
+{
+	DCC_MODAL_SHORT = 1,
+	DCC_MODAL_PARAGRAPH
+};
+
 #define DCC_INVALID_CHANNEL DCC_Channel:0
 #define DCC_INVALID_USER DCC_User:0
 #define DCC_INVALID_ROLE DCC_Role:0
@@ -74,6 +88,7 @@ native DCC_IsChannelNsfw(DCC_Channel:channel, &bool:is_nsfw);
 native DCC_GetChannelParentCategory(DCC_Channel:channel, &DCC_Channel:category);
 
 native DCC_SendChannelMessage(DCC_Channel:channel, const message[], const callback[] = "", const format[] = "", {Float, _}:...);
+native DCC_SendChannelMessageWithButton(DCC_Channel:channel, const message[], const label[], const custom_id[], DCC_ButtonStyle:style = DCC_BUTTON_PRIMARY, const callback[] = "", const format[] = "", {Float, _}:...);
 native DCC_SetChannelName(DCC_Channel:channel, const name[]);
 native DCC_SetChannelTopic(DCC_Channel:channel, const topic[]);
 native DCC_SetChannelPosition(DCC_Channel:channel, position);
@@ -230,6 +245,13 @@ native DCC_GetInteractionChannel(DCC_Interaction:interaction, &DCC_Channel:chann
 native DCC_GetInteractionGuild(DCC_Interaction:interaction, &DCC_Guild:guild);
 native DCC_SendInteractionEmbed(DCC_Interaction:interaction, DCC_Embed:embed, const message[] = "");
 native DCC_SendInteractionMessage(DCC_Interaction:interaction, const message[] = "");
+native DCC_GetInteractionCustomId(DCC_Interaction:interaction, dest[], max_size = sizeof dest);
+native DCC_GetModalInputValue(DCC_Interaction:interaction, const custom_id[], dest[], max_size = sizeof dest);
+native DCC_DeferInteraction(DCC_Interaction:interaction, bool:update_message = false);
+native DCC_Modal:DCC_CreateModal(const custom_id[], const title[]);
+native DCC_AddModalTextInput(DCC_Modal:modal, const custom_id[], const label[], DCC_ModalTextInputStyle:style = DCC_MODAL_SHORT, const placeholder[] = "", bool:required = true, min_length = 0, max_length = 4000);
+native DCC_ShowModal(DCC_Interaction:interaction, DCC_Modal:modal);
+native DCC_DeleteModal(DCC_Modal:modal);
 
 // callbacks
 //  channels
@@ -241,6 +263,8 @@ forward DCC_OnChannelDelete(DCC_Channel:channel);
 forward DCC_OnMessageCreate(DCC_Message:message);
 forward DCC_OnMessageDelete(DCC_Message:message);
 forward DCC_OnMessageReaction(DCC_Message:message, DCC_User:reaction_user, DCC_Emoji:emoji, DCC_MessageReactionType:reaction_type);
+forward DCC_OnButtonClick(DCC_Interaction:interaction, DCC_User:user);
+forward DCC_OnModalSubmit(DCC_Interaction:interaction, DCC_User:user);
 
 //  users
 forward DCC_OnUserUpdate(DCC_User:user);

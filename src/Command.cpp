@@ -201,48 +201,104 @@ void CommandManager::Initialize()
 
 	Network::Get()->WebSocket().RegisterEvent(WebSocket::Event::INTERACTION_CREATE, [this](const json& data)
 	{
-		if (data.find("type") != data.end() && data.at("type").get<int>() == 2 /*application command*/)
+		auto type_it = data.find("type");
+		if (type_it == data.end() || !type_it->is_number_integer())
 		{
-			json my_awesome_json;
-			std::string json_str;
+			return;
+		}
 
+		int const interaction_type = type_it->get<int>();
+		if (interaction_type != 2 && interaction_type != 3 && interaction_type != 5)
+		{
+			return;
+		}
 
-			my_awesome_json["type"] = 5; // DeferredChannelMessageWithSource
-			if (!utils::TryDumpJson(my_awesome_json, json_str))
+		if (interaction_type == 3)
+		{
+			auto component_type = data.at("data").find("component_type");
+			if (component_type == data.at("data").end() || component_type->get<int>() != 2)
 			{
-				Logger::Get()->Log(samplog_LogLevel::ERROR, "can't serialize JSON: {}", json_str);
+				return;
+			}
+		}
+
+		auto acknowledge = [&data](int response_type)
+		{
+			json response = { { "type", response_type } };
+			std::string json_str;
+			if (!utils::TryDumpJson(response, json_str))
+			{
+				Logger::Get()->Log(samplog_LogLevel::ERROR,
+					"can't serialize interaction acknowledgement: {}", json_str);
+				return false;
+			}
+			Network::Get()->Http().Post(fmt::format("/interactions/{:s}/{:s}/callback",
+				data.at("id").get<std::string>(), data.at("token").get<std::string>()), json_str);
+			return true;
+		};
+
+		bool acknowledged = false;
+		if (interaction_type == 2 || interaction_type == 5)
+		{
+			acknowledged = acknowledge(5); // DeferredChannelMessageWithSource
+			if (!acknowledged)
+			{
+				return;
+			}
+		}
+
+		UserId_t userid = 0;
+		std::string guild_id;
+		bool const has_guild = utils::TryGetJsonValue(data, guild_id, "guild_id");
+		if (has_guild && data.find("member") != data.end()
+			&& data.at("member").find("user") != data.at("member").end())
+		{
+			userid = UserManager::Get()->AddUser(data.at("member").at("user"));
+		}
+		else if (data.find("user") != data.end())
+		{
+			userid = UserManager::Get()->AddUser(data.at("user"));
+		}
+
+		auto const interactionid = CommandInteractionManager::Get()->AddCommandInteraction(
+			userid, data, acknowledged);
+		PawnDispatcher::Get()->Dispatch([interaction_type, userid, interactionid, data]() mutable
+		{
+			auto const& interaction =
+				CommandInteractionManager::Get()->FindCommandInteraction(interactionid);
+			if (!interaction)
+			{
 				return;
 			}
 
-			Network::Get()->Http().Post(fmt::format("/interactions/{:s}/{:s}/callback", data.at("id").get<std::string>(), data.at("token").get<std::string>()), json_str);
-
-			UserId_t userid = 0;
-
-			std::string meh;
-			bool has_guild = utils::TryGetJsonValue(data, meh, "guild_id");
-			if (has_guild) {
-				userid = UserManager::Get()->AddUser(data["member"]["user"]);
-			}
-			else {
-				userid = UserManager::Get()->AddUser(data["user"]);
-			}
-			
-			auto interactionid = CommandInteractionManager::Get()->AddCommandInteraction(userid, data);
-			PawnDispatcher::Get()->Dispatch([userid, interactionid, data]() mutable
+			pawn_cb::Error error;
+			if (interaction_type == 2 && userid)
 			{
-				auto & interaction = CommandInteractionManager::Get()->FindCommandInteraction(interactionid);
-				auto & command = CommandManager::Get()->FindCommand(CommandManager::Get()->FindCommandIdByName(data.at("data").at("name").get<std::string>(), interaction->GetGuildID()));
-				if (interaction && command && userid)
+				auto const& command = CommandManager::Get()->FindCommand(
+					CommandManager::Get()->FindCommandIdByName(
+						data.at("data").at("name").get<std::string>(), interaction->GetGuildID()));
+				if (command)
 				{
-					// forward CallbackName(DCC_Interaction:interaction, DCC_User:user);	
 					CommandInteractionManager::Get()->m_CurrentInteractionID = interaction->GetPawnId();
-					pawn_cb::Error error;
-					pawn_cb::Callback::CallFirst(error, command->GetCallback().c_str(), interaction->GetPawnId(), userid);	
-					CommandInteractionManager::Get()->m_CurrentInteractionID = INVALID_COMMAND_INTERACTION_ID;
+					pawn_cb::Callback::CallFirst(error, command->GetCallback().c_str(),
+						interaction->GetPawnId(), userid);
+					CommandInteractionManager::Get()->m_CurrentInteractionID =
+						INVALID_COMMAND_INTERACTION_ID;
 				}
-				CommandInteractionManager::Get()->DeleteCommandInteraction(interaction->GetPawnId());
-			});
-		}
+			}
+			else if (interaction_type == 3 && userid)
+			{
+				pawn_cb::Callback::CallFirst(error, "DCC_OnButtonClick",
+					interaction->GetPawnId(), userid);
+			}
+			else if (interaction_type == 5 && userid)
+			{
+				pawn_cb::Callback::CallFirst(error, "DCC_OnModalSubmit",
+					interaction->GetPawnId(), userid);
+			}
+
+			CommandInteractionManager::Get()->DeleteCommandInteraction(interaction->GetPawnId());
+		});
 	});
 }
 

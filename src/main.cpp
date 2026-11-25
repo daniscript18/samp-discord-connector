@@ -189,6 +189,7 @@ extern "C" const AMX_NATIVE_INFO native_list[] =
 	AMX_DEFINE_NATIVE(DCC_IsChannelNsfw)
 	AMX_DEFINE_NATIVE(DCC_GetChannelParentCategory)
 	AMX_DEFINE_NATIVE(DCC_SendChannelMessage)
+	AMX_DEFINE_NATIVE(DCC_SendChannelMessageWithButton)
 	AMX_DEFINE_NATIVE(DCC_SetChannelName)
 	AMX_DEFINE_NATIVE(DCC_SetChannelTopic)
 	AMX_DEFINE_NATIVE(DCC_SetChannelPosition)
@@ -311,6 +312,13 @@ extern "C" const AMX_NATIVE_INFO native_list[] =
 	AMX_DEFINE_NATIVE(DCC_GetInteractionGuild)
 	AMX_DEFINE_NATIVE(DCC_SendInteractionEmbed)
 	AMX_DEFINE_NATIVE(DCC_SendInteractionMessage)
+	AMX_DEFINE_NATIVE(DCC_GetInteractionCustomId)
+	AMX_DEFINE_NATIVE(DCC_GetModalInputValue)
+	AMX_DEFINE_NATIVE(DCC_DeferInteraction)
+	AMX_DEFINE_NATIVE(DCC_CreateModal)
+	AMX_DEFINE_NATIVE(DCC_AddModalTextInput)
+	AMX_DEFINE_NATIVE(DCC_ShowModal)
+	AMX_DEFINE_NATIVE(DCC_DeleteModal)
 	AMX_DEFINE_NATIVE(DCC_DeleteCommand)
 	{ NULL, NULL }
 };

@@ -106,3 +106,38 @@ Set your Discord bot token in the server configuration or environment:
 - `DCC_BOT_TOKEN`
 
 Never share your bot token publicly.
+
+## Interactive buttons and modal forms
+
+The Pawn API supports a message with one button, button-click callbacks, and modal forms with up to five text inputs:
+
+```pawn
+DCC_SendChannelMessageWithButton(channel, "Open the form", "Send feedback", "open_feedback");
+
+public DCC_OnButtonClick(DCC_Interaction:interaction, DCC_User:user)
+{
+    new custom_id[101];
+    DCC_GetInteractionCustomId(interaction, custom_id);
+    if (!strcmp(custom_id, "open_feedback"))
+    {
+        new DCC_Modal:modal = DCC_CreateModal("feedback_form", "Send feedback");
+        DCC_AddModalTextInput(modal, "feedback", "What should we know?",
+            DCC_MODAL_PARAGRAPH, "Type your feedback", true, 1, 1000);
+        DCC_ShowModal(interaction, modal);
+        DCC_DeleteModal(modal);
+    }
+    return 1;
+}
+
+public DCC_OnModalSubmit(DCC_Interaction:interaction, DCC_User:user)
+{
+    new feedback[1001];
+    DCC_GetModalInputValue(interaction, "feedback", feedback);
+    DCC_SendInteractionMessage(interaction, "Thanks for your feedback!");
+    return 1;
+}
+```
+
+Button styles are `DCC_BUTTON_PRIMARY`, `DCC_BUTTON_SECONDARY`, `DCC_BUTTON_SUCCESS`, and `DCC_BUTTON_DANGER`. Text inputs support `DCC_MODAL_SHORT` and `DCC_MODAL_PARAGRAPH`. A modal can contain one to five inputs; each input's `custom_id` is used to retrieve its submitted value.
+
+Button interactions must be acknowledged within Discord's response window. Open a modal with `DCC_ShowModal`, send a response with `DCC_SendInteractionMessage`, or call `DCC_DeferInteraction` before doing longer work. Modal submissions are deferred automatically, so `DCC_SendInteractionMessage` can be used to send the response. The current button-message native adds one button to a plain channel message.
